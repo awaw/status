@@ -1,5 +1,3 @@
-#PROG=xcb
-#SRCS=xcb.c
 PROG=status
 SRCS=status.c
 MAN=
