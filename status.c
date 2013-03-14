@@ -237,15 +237,12 @@ datetime(void)
 static void
 redraw(void)
 {
-	/*XftDrawRect(xftd, &black, 0, 0, BARWIDTH, BARHEIGHT); XXX flicker?*/
-	XFillRectangle(d, w, DefaultGC(d, s), 0, 0, BARWIDTH, BARHEIGHT);
 	desktops(5);
 	memory(90);
 	loadaverage(400);
 	procs(550);
 	showfile(700);
 	datetime();
-	XFlush(d);
 }
  
 int
@@ -323,6 +320,7 @@ main(int argc, char *argv[])
 			break;
 		if (nfds == 0) {
 			redraw();
+			XFlush(d);
 			continue;
 		}
 
@@ -332,6 +330,7 @@ main(int argc, char *argv[])
 				redraw();
 			}
 			if (e.type == Expose) {
+				XftDrawRect(xftd, &black, 0, 0, BARWIDTH, BARHEIGHT);
 				redraw();
 			}
 			if (e.type == ButtonPress) {
