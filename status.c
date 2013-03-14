@@ -87,6 +87,22 @@ get_int_property(const char *propname) {
 }
 
 static void
+drawstring(char *str, int x, int flushright)
+{
+	XGlyphInfo extents;
+	int erasemore = 10;
+
+	XftTextExtentsUtf8(d, xftfont, (const FcChar8 *)str, strlen(str), &extents);
+	if (flushright) {
+		XftDrawRect(xftd, &black, x - extents.xOff - erasemore, 0, extents.xOff + erasemore, BARHEIGHT);
+		XftDrawStringUtf8(xftd, &white, xftfont, x - extents.xOff, 1 + xftfont->ascent, (const FcChar8 *)str, strlen(str));
+	} else {
+		XftDrawRect(xftd, &black, x, 0, extents.xOff + erasemore, BARHEIGHT);
+		XftDrawStringUtf8(xftd, &white, xftfont, x, 1 + xftfont->ascent, (const FcChar8 *)str, strlen(str));
+	}
+}
+
+static void
 desktops(int start)
 {
 	char buf[4];
@@ -118,7 +134,6 @@ loadaverage(int start)
 	size_t size;
 	int mib[2];
 	char buf[32];
-	XGlyphInfo extents;
 
 	mib[0] = CTL_VM;
 	mib[1] = VM_LOADAVG;
@@ -131,9 +146,7 @@ loadaverage(int start)
 	    (double) load.ldavg[1] / load.fscale,
 	    (double) load.ldavg[2] / load.fscale);
 
-	XftTextExtentsUtf8(d, xftfont, (const FcChar8 *)buf, strlen(buf), &extents);
-	XftDrawRect(xftd, &black, start, 0, extents.xOff, BARHEIGHT);
-	XftDrawStringUtf8(xftd, &white, xftfont, start, 1 + xftfont->ascent, (const FcChar8 *)buf, strlen(buf));
+	drawstring(buf, start, 0);
 }
 
 /* scale from 4K pages to K or M */
@@ -148,7 +161,6 @@ memory(int start)
 	size_t size;
 	int mib[3];
 	char buf[64];
-	XGlyphInfo extents;
 
 	mib[0] = CTL_VM;
 	mib[1] = VM_METER;
@@ -168,9 +180,7 @@ memory(int start)
 	    scale(vmt.t_free), unit(vmt.t_free),
 	    scale(bcs.numbufpages), unit(bcs.numbufpages));
 
-	XftTextExtentsUtf8(d, xftfont, (const FcChar8 *)buf, strlen(buf), &extents);
-	XftDrawRect(xftd, &black, start, 0, extents.xOff, BARHEIGHT);
-	XftDrawStringUtf8(xftd, &white, xftfont, start, 1 + xftfont->ascent, (const FcChar8 *)buf, strlen(buf));
+	drawstring(buf, start, 0);
 }
 
 static void
@@ -180,7 +190,6 @@ procs(int start)
 	size_t size;
 	int mib[2];
 	char buf[32];
-	XGlyphInfo extents;
 
 	mib[0] = CTL_KERN;
 	mib[1] = KERN_NPROCS;
@@ -190,9 +199,7 @@ procs(int start)
 
 	sprintf(buf, "Procs: %d", nprocs);
 
-	XftTextExtentsUtf8(d, xftfont, (const FcChar8 *)buf, strlen(buf), &extents);
-	XftDrawRect(xftd, &black, start, 0, extents.xOff, BARHEIGHT);
-	XftDrawStringUtf8(xftd, &white, xftfont, start, 1 + xftfont->ascent, (const FcChar8 *)buf, strlen(buf));
+	drawstring(buf, start, 0);
 }
 
 static void
@@ -202,7 +209,6 @@ showfile(int start)
 	char *p;
 	size_t len, pos = 0;
 	char buf[256];
-	XGlyphInfo extents;
 
 	f = fopen("/tmp/status.txt", "r");
 	p = fgetln(f, &len);
@@ -211,16 +217,13 @@ showfile(int start)
 	buf[pos] = '\0';
 	fclose(f);
 
-	XftTextExtentsUtf8(d, xftfont, (const FcChar8 *)buf, strlen(buf), &extents);
-	XftDrawRect(xftd, &black, start, 0, extents.xOff, BARHEIGHT);
-	XftDrawStringUtf8(xftd, &white, xftfont, start, 1 + xftfont->ascent, (const FcChar8 *)buf, strlen(buf));
+	drawstring(buf, start, 0);
 }
 
 static void
 datetime(void)
 {
 	char buf[40];
-	XGlyphInfo extents;
 
 	tick = time(NULL);
 	if (tick % 2)
@@ -228,10 +231,7 @@ datetime(void)
 	else
 		strftime(buf, sizeof(buf), "%A %d.%m.%Y %H.%M", localtime(&tick));
 
-	XftTextExtentsUtf8(d, xftfont, (const FcChar8 *)buf, strlen(buf), &extents);
-	/*XFillRectangle(d, w, DefaultGC(d, s), BARWIDTH - 5 - extents.xOff, 0, BARWIDTH, BARHEIGHT);*/
-	XftDrawRect(xftd, &black, BARWIDTH - 5 - extents.xOff, 0, extents.xOff, BARHEIGHT);
-	XftDrawStringUtf8(xftd, &white, xftfont, BARWIDTH - 5 - extents.xOff, 1 + xftfont->ascent, (const FcChar8 *)buf, strlen(buf));
+	drawstring(buf, BARWIDTH - 5, 1);
 }
 
 static void
