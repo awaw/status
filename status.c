@@ -265,16 +265,20 @@ main(int argc, char *argv[])
 	XStoreName(d, w, "status");
 
 	type = XInternAtom(d, "_NET_WM_WINDOW_TYPE_DOCK", False);
-	XChangeProperty(d, w, XInternAtom(d, "_NET_WM_WINDOW_TYPE", False), XInternAtom(d, "ATOM", False), 32, PropModeReplace, (unsigned char *)&type, 1);
+	XChangeProperty(d, w, XInternAtom(d, "_NET_WM_WINDOW_TYPE", False),
+	    XInternAtom(d, "ATOM", False), 32, PropModeReplace, (unsigned char *)&type, 1);
 
 	type = XInternAtom(d, "_NET_WM_STATE_ABOVE", False);
-	XChangeProperty(d, w, XInternAtom(d, "_NET_WM_STATE", False), XInternAtom(d, "ATOM", False), 32, PropModeReplace, (unsigned char *)&type, 1);
+	XChangeProperty(d, w, XInternAtom(d, "_NET_WM_STATE", False),
+	    XInternAtom(d, "ATOM", False), 32, PropModeReplace, (unsigned char *)&type, 1);
 
 	type = XInternAtom(d, "_NET_WM_STATE_STICKY", False);
-	XChangeProperty(d, w, XInternAtom(d, "_NET_WM_STATE", False), XInternAtom(d, "ATOM", False), 32, PropModeAppend, (unsigned char *)&type, 1); 
+	XChangeProperty(d, w, XInternAtom(d, "_NET_WM_STATE", False),
+	    XInternAtom(d, "ATOM", False), 32, PropModeAppend, (unsigned char *)&type, 1); 
 
 	desktop = 0xffffffff;
-	XChangeProperty(d, w, XInternAtom(d, "_NET_WM_DESKTOP", False), XInternAtom(d, "CARDINAL", False), 32, PropModeReplace, (unsigned char *)&desktop, 1);
+	XChangeProperty(d, w, XInternAtom(d, "_NET_WM_DESKTOP", False),
+	    XInternAtom(d, "CARDINAL", False), 32, PropModeReplace, (unsigned char *)&desktop, 1);
 
 	xftd = XftDrawCreate(d, w, DefaultVisual(d, s), DefaultColormap(d, s));
 
@@ -308,7 +312,9 @@ main(int argc, char *argv[])
 
 		while (XPending(d)) {
 			XNextEvent(d, &e);
-			if (e.type == PropertyNotify && e.xproperty.window == RootWindow(d, s) && e.xproperty.atom == XInternAtom(d, "_NET_CURRENT_DESKTOP", True)) {
+			if (e.type == PropertyNotify &&
+			    e.xproperty.window == RootWindow(d, s) &&
+			    e.xproperty.atom == XInternAtom(d, "_NET_CURRENT_DESKTOP", True)) {
 				redraw();
 			}
 			if (e.type == Expose) {
