@@ -191,17 +191,15 @@ showfile(int start)
 {
 	FILE *f;
 	char *p;
-	size_t len, pos = 0;
-	char buf[256];
+	size_t len;
 
 	f = fopen("/tmp/status.txt", "r");
 	p = fgetln(f, &len);
-	while(pos < 256 && len-- && *p != '\n')
-		buf[pos++] = *p++;
-	buf[pos] = '\0';
+	if (!p || !len)
+		return;
+	p[len - 1] = '\0';
+	drawstring(p, start, 0);
 	fclose(f);
-
-	drawstring(buf, start, 0);
 }
 
 static void
