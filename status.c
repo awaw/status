@@ -48,38 +48,20 @@ static int
 get_int_property(const char *propname) {
 	Atom property;
 	Atom type;
-	int format;
-	unsigned long remaining;
-	unsigned long nitems;
+	unsigned long remain, nitems;
 	unsigned char *ptr;
-	int ret;
+	int format, ret;
 
 	property = XInternAtom(d, propname, True);
-	if (property == None) {
-		fprintf(stderr, "Atom %s does not exist\n", propname);
+	if (property == None)
 		return (-1);
-	}
 
 	if (XGetWindowProperty(d, DefaultRootWindow(d), property, 0, 1, False,
-			AnyPropertyType, &type, &format, &nitems, &remaining, &ptr) != Success) {
-		fprintf(stderr, "XGetWindowProperty failed\n");
+	    AnyPropertyType, &type, &format, &nitems, &remain, &ptr) != Success)
 		return (-1);
-	}
 
-	if (type == None || format == 0) {
-		fprintf(stderr, "Window is missing property %s\n", propname);
+	if (type == None || format != 32 || remain)
 		return (-1);
-	}
-
-	if (remaining) {
-		fprintf(stderr, "%s is too big for me\n", propname);
-		return (-1);
-	}
-
-	if (format != 32) {
-		fprintf(stderr, "%s has bad format\n", propname);
-		return (-1);
-	}
 
 	ret = *ptr;
 	XFree(ptr);
@@ -112,6 +94,8 @@ desktops(int start)
 
 	curdesk = get_int_property("_NET_CURRENT_DESKTOP");
 	numdesk = get_int_property("_NET_NUMBER_OF_DESKTOPS");
+	if (curdesk < 0 || numdesk < 0)
+		return;
 
 	for(i=0, x=start; i<numdesk; i++, x+=cellwidth) {
 		sprintf(buf, "%d", i+1);
