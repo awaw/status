@@ -21,6 +21,7 @@
 #include <sys/vmmeter.h>
 #include <sys/mount.h>
 #include <sys/sensors.h>
+#include <sys/dkstat.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,7 +40,7 @@
 Display *d;
 Window w;
 XftFont *xftfont;
-XftColor white, black;
+XftColor white, black, red, green;
 XftDraw *xftd;
 int s;
 time_t tick = (time_t)0;
@@ -68,7 +69,7 @@ get_int_property(const char *propname) {
 	return ret;
 }
 
-static void
+static int
 drawstring(char *str, int x, int flushright)
 {
 	XGlyphInfo extents;
@@ -82,6 +83,7 @@ drawstring(char *str, int x, int flushright)
 		XftDrawRect(xftd, &black, x, 0, extents.xOff + erasemore, BARHEIGHT);
 		XftDrawStringUtf8(xftd, &white, xftfont, x, 1 + xftfont->ascent, (const FcChar8 *)str, strlen(str));
 	}
+	return extents.xOff;
 }
 
 static void
@@ -97,7 +99,7 @@ desktops(int start)
 	if (curdesk < 0 || numdesk < 0)
 		return;
 
-	for(i=0, x=start; i<numdesk; i++, x+=cellwidth) {
+	for (i=0, x=start; i<numdesk; i++, x+=cellwidth) {
 		sprintf(buf, "%d", i+1);
 		if (i == curdesk) {
 			XftDrawRect(xftd, &white, x, 0, cellwidth, BARHEIGHT);
@@ -108,6 +110,50 @@ desktops(int start)
 			XftTextExtentsUtf8(d, xftfont, (const FcChar8 *)buf, strlen(buf), &extents);
 			XftDrawStringUtf8(xftd, &white, xftfont, x + (cellwidth - extents.xOff) / 2, 2 + xftfont->ascent, (const FcChar8 *)buf, strlen(buf));
 		}
+	}
+}
+
+#define MAXVAL 20
+static int busy[MAXVAL];
+static long cpulast[CPUSTATES] = {0,0,0,0,0};
+
+static void
+cpubar(int start)
+{
+	int i, len, title;
+	long sum, diff, cpunow[CPUSTATES], cpudiff[CPUSTATES];
+	int mib[] = { CTL_KERN, KERN_CPTIME };
+	size_t size = sizeof(cpunow);
+
+	title = drawstring("CPU: ", start, 0);
+
+	if (sysctl(mib, 2, &cpunow, &size, NULL, 0) < 0)
+		return;
+
+	if (!cpulast[0]) {
+		for (i=0, sum=0; i<CPUSTATES; i++)
+			cpulast[i] = cpunow[i];
+		return;
+	}
+
+	for (i=0, sum=0; i<CPUSTATES; i++) {
+		if (cpunow[i] < cpulast[i])
+			diff = LONG_MAX - cpulast[i] + cpunow[i];
+		else
+			diff = cpunow[i] - cpulast[i];
+		sum += diff;
+		cpudiff[i] = diff;
+		cpulast[i] = cpunow[i];
+	}
+
+	for (i=0; i<MAXVAL-1; i++)
+		busy[i] = busy[i+1];
+	busy[MAXVAL-1] = 100 - (int)((100 * cpudiff[CP_IDLE]) / sum);
+
+	XftDrawRect(xftd, &black, start + title, 0, MAXVAL, BARHEIGHT);
+	for (i=0; i<MAXVAL; i++) {
+		len = (int)((BARHEIGHT - 2) * busy[i] / 100);
+		XftDrawRect(xftd, &green, start + title + i, BARHEIGHT - 1 - len, 1, len);
 	}
 }
 
@@ -223,7 +269,8 @@ redraw(void)
 	memory(90);
 	loadaverage(400);
 	procs(550);
-	showfile(700);
+	cpubar(650);
+	showfile(750);
 	datetime();
 }
  
@@ -284,6 +331,8 @@ main(int argc, char *argv[])
 
 	XftColorAllocName(d, DefaultVisual(d, s), DefaultColormap(d, s),  "white",  &white);
 	XftColorAllocName(d, DefaultVisual(d, s), DefaultColormap(d, s),  "black",  &black);
+	XftColorAllocName(d, DefaultVisual(d, s), DefaultColormap(d, s),  "red",  &red);
+	XftColorAllocName(d, DefaultVisual(d, s), DefaultColormap(d, s),  "green",  &green);
 
 	xftfont = XftFontOpenXlfd(d, s, fontstr);
 	if (!xftfont)
@@ -291,7 +340,7 @@ main(int argc, char *argv[])
 	if (!xftfont)
 		exit(1);
 
-	XSelectInput(d, w, ExposureMask | ButtonPressMask);
+	XSelectInput(d, w, ExposureMask | ButtonPressMask | ButtonReleaseMask | Button1MotionMask);
 	XSelectInput(d, RootWindow(d, s), PropertyChangeMask);
 
 	XMapWindow(d, w);
